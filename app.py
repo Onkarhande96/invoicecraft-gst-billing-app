@@ -9,6 +9,10 @@ from datetime import date, datetime
 import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 import pandas as pd
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 import streamlit as st
 
 # ==========================================
@@ -157,7 +161,7 @@ PRESETS = {
         "client_address": "Level 5, Embassy Tech Village, Outer Ring Rd, Bangalore - 560103",
         "client_state": "29 - Karnataka",
         "items": [
-            {"description": "Custom API Webhook Integration for HubSpot CRM", "hsn": "998314", "qty": 1.0, "unit": "Nos", "rate": 48000.0, "discount": 0.0, "gst_rate": 18.0},
+            {"description": "Custom API Webhook Integration for CRM", "hsn": "998314", "qty": 1.0, "unit": "Nos", "rate": 48000.0, "discount": 0.0, "gst_rate": 18.0},
             {"description": "Automated Telegram Notification Bot Development", "hsn": "998314", "qty": 1.0, "unit": "Nos", "rate": 22000.0, "discount": 5.0, "gst_rate": 18.0},
         ],
         "bank_name": "ICICI Bank Ltd",
@@ -205,7 +209,6 @@ if "invoice_meta" not in st.session_state:
 if "invoice_items" not in st.session_state:
     st.session_state.invoice_items = list(default_data["items"])
 
-# Function to load a preset
 def load_preset(preset_key):
     p = PRESETS[preset_key]
     st.session_state.invoice_meta.update({
@@ -230,181 +233,6 @@ def load_preset(preset_key):
     st.session_state.invoice_items = list(p["items"])
 
 # ==========================================
-# CUSTOM CSS FOR INVOICE STYLING
-# ==========================================
-st.markdown(
-    """
-    <style>
-    /* Metric Cards */
-    div[data-testid="stMetric"] {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 14px 18px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    div[data-testid="stMetricValue"] {
-        font-size: 1.6rem !important;
-        font-weight: 800 !important;
-        color: #0f172a !important;
-    }
-
-    /* Print Preview Container */
-    .invoice-box {
-        max-width: 900px;
-        margin: auto;
-        padding: 30px 40px;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-        background: #ffffff;
-        color: #1e293b;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        border-radius: 8px;
-    }
-    .inv-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        border-bottom: 2px solid #2563eb;
-        padding-bottom: 16px;
-        margin-bottom: 24px;
-    }
-    .inv-title {
-        font-size: 26px;
-        font-weight: 800;
-        color: #2563eb;
-        margin: 0;
-        letter-spacing: -0.5px;
-    }
-    .inv-badge {
-        display: inline-block;
-        background: #eff6ff;
-        color: #1d4ed8;
-        font-size: 12px;
-        font-weight: 700;
-        padding: 3px 10px;
-        border-radius: 4px;
-        margin-top: 4px;
-    }
-    .inv-grid-2 {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 30px;
-        margin-bottom: 24px;
-        font-size: 13.5px;
-        line-height: 1.5;
-    }
-    .inv-party-title {
-        font-weight: 700;
-        font-size: 13px;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 6px;
-        border-bottom: 1px solid #f1f5f9;
-        padding-bottom: 4px;
-    }
-    .inv-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 24px;
-        font-size: 13px;
-    }
-    .inv-table th {
-        background-color: #f8fafc;
-        color: #334155;
-        font-weight: 700;
-        padding: 10px 12px;
-        text-align: left;
-        border-bottom: 2px solid #e2e8f0;
-    }
-    .inv-table td {
-        padding: 10px 12px;
-        border-bottom: 1px solid #f1f5f9;
-        color: #1e293b;
-    }
-    .inv-table tr:hover td {
-        background-color: #fafafa;
-    }
-    .inv-summary-grid {
-        display: grid;
-        grid-template-columns: 1.2fr 1fr;
-        gap: 30px;
-        margin-bottom: 24px;
-        font-size: 13.5px;
-    }
-    .inv-total-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 6px 0;
-        border-bottom: 1px solid #f1f5f9;
-    }
-    .inv-grand-total {
-        display: flex;
-        justify-content: space-between;
-        padding: 12px 0;
-        font-size: 18px;
-        font-weight: 800;
-        color: #0f172a;
-        border-top: 2px solid #0f172a;
-        border-bottom: 2px solid #0f172a;
-        margin-top: 8px;
-    }
-    .words-box {
-        background: #f8fafc;
-        border-radius: 6px;
-        padding: 10px 14px;
-        font-size: 12.5px;
-        color: #475569;
-        font-style: italic;
-        margin-bottom: 20px;
-        border-left: 3px solid #2563eb;
-    }
-    .inv-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        padding-top: 20px;
-        border-top: 1px solid #e2e8f0;
-        font-size: 12px;
-        color: #64748b;
-    }
-    .sign-box {
-        text-align: center;
-        border-top: 1px solid #cbd5e1;
-        width: 220px;
-        padding-top: 6px;
-        font-weight: 600;
-        color: #1e293b;
-    }
-
-    /* Print media style */
-    @media print {
-        body * {
-            visibility: hidden;
-        }
-        .invoice-box, .invoice-box * {
-            visibility: visible;
-        }
-        .invoice-box {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100% !important;
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-        }
-        .no-print {
-            display: none !important;
-        }
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# ==========================================
 # SIDEBAR CONTROLS
 # ==========================================
 with st.sidebar:
@@ -412,20 +240,20 @@ with st.sidebar:
     st.caption("Automated GST Invoice & Billing SaaS")
     st.markdown("---")
 
-    st.markdown("#### ⚡ Quick Load Business Presets")
+    st.markdown("#### ⚡ Quick Load Presets")
     selected_preset = st.selectbox(
-        "Choose Template Preset:",
+        "Choose Template:",
         list(PRESETS.keys()),
         index=list(PRESETS.keys()).index(st.session_state.current_preset),
     )
-    if st.button("Apply Template Preset ➔", use_container_width=True):
+    if st.button("Apply Template ➔", use_container_width=True):
         st.session_state.current_preset = selected_preset
         load_preset(selected_preset)
         st.success(f"Loaded: {selected_preset}")
         st.rerun()
 
     st.markdown("---")
-    st.markdown("#### ⚙️ Quick Invoice Settings")
+    st.markdown("#### ⚙️ Invoice Numbers & Dates")
     st.session_state.invoice_meta["invoice_number"] = st.text_input(
         "Invoice Number", st.session_state.invoice_meta["invoice_number"]
     )
@@ -458,7 +286,6 @@ seller_state_code = st.session_state.invoice_meta["seller_state"][:2]
 client_state_code = st.session_state.invoice_meta["client_state"][:2]
 is_interstate = seller_state_code != client_state_code
 
-# Calculate line items
 processed_items = []
 total_taxable = 0.0
 total_cgst = 0.0
@@ -512,6 +339,297 @@ gross_total = total_taxable + total_tax
 round_off = round(gross_total) - gross_total
 net_payable = round(gross_total)
 amount_words = number_to_words_inr(net_payable)
+meta = st.session_state.invoice_meta
+
+# ==========================================
+# REPORTLAB PDF GENERATION ENGINE
+# ==========================================
+def generate_pdf_invoice():
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=28,
+        rightMargin=28,
+        topMargin=28,
+        bottomMargin=28,
+    )
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        "InvTitle",
+        parent=styles["Heading1"],
+        fontName="Helvetica-Bold",
+        fontSize=18,
+        leading=22,
+        textColor=colors.HexColor("#1E3A8A"),
+    )
+    sub_title_style = ParagraphStyle(
+        "InvSub",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor("#475569"),
+    )
+    bold_sub = ParagraphStyle(
+        "InvBoldSub",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=9,
+        leading=13,
+        textColor=colors.HexColor("#0F172A"),
+    )
+    table_cell = ParagraphStyle(
+        "TableCell",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=8.5,
+        leading=11,
+    )
+    table_cell_bold = ParagraphStyle(
+        "TableCellBold",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=8.5,
+        leading=11,
+    )
+
+    story = []
+
+    # Header Row (Seller vs Invoice Info)
+    header_data = [
+        [
+            Paragraph(f"<b>{meta['seller_name']}</b>", title_style),
+            Paragraph("<b>TAX INVOICE</b><br/><font size=7 color='#2563EB'>Original for Recipient</font>", ParagraphStyle("HdrRight", parent=title_style, alignment=2, fontSize=16, leading=19)),
+        ],
+        [
+            Paragraph(f"{meta['seller_address']}<br/><b>GSTIN:</b> {meta['seller_gstin']} | <b>PAN:</b> {meta['seller_pan']}<br/><b>Phone:</b> {meta['seller_phone']} | <b>State:</b> {meta['seller_state']}", sub_title_style),
+            Paragraph(f"<b>Invoice #:</b> {meta['invoice_number']}<br/><b>Date:</b> {meta['invoice_date']}<br/><b>Due Date:</b> {meta['due_date']}", ParagraphStyle("HdrRightSub", parent=sub_title_style, alignment=2)),
+        ],
+    ]
+    hdr_table = Table(header_data, colWidths=[330, 210])
+    hdr_table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LINEBELOW", (0, 1), (-1, 1), 1.5, colors.HexColor("#2563EB")),
+        ("BOTTOMPADDING", (0, 1), (-1, 1), 8),
+    ]))
+    story.append(hdr_table)
+    story.append(Spacer(1, 10))
+
+    # Party Details (Billed To vs Place of Supply)
+    party_data = [
+        [
+            Paragraph("<font color='#64748B'><b>BILLED TO (CLIENT DETAILS):</b></font>", bold_sub),
+            Paragraph("<font color='#64748B'><b>DISPATCH / SUPPLY DETAILS:</b></font>", bold_sub),
+        ],
+        [
+            Paragraph(f"<b>{meta['client_name']}</b><br/>{meta['client_address']}<br/><b>GSTIN:</b> {meta['client_gstin'] or 'Unregistered'}<br/><b>State:</b> {meta['client_state']}", sub_title_style),
+            Paragraph(f"<b>Supplier:</b> {meta['seller_name']}<br/><b>Place of Supply:</b> {meta['client_state']}<br/><b>Tax Mechanism:</b> {'Inter-State (IGST)' if is_interstate else 'Intra-State (CGST + SGST)'}", sub_title_style),
+        ],
+    ]
+    party_table = Table(party_data, colWidths=[270, 270])
+    party_table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+        ("PADDING", (0, 0), (-1, -1), 8),
+    ]))
+    story.append(party_table)
+    story.append(Spacer(1, 12))
+
+    # Line Items Table
+    headers = [
+        Paragraph("<b>#</b>", table_cell_bold),
+        Paragraph("<b>Item Description</b>", table_cell_bold),
+        Paragraph("<b>HSN</b>", table_cell_bold),
+        Paragraph("<b>Qty</b>", table_cell_bold),
+        Paragraph("<b>Rate (₹)</b>", table_cell_bold),
+        Paragraph("<b>Disc %</b>", table_cell_bold),
+        Paragraph("<b>Taxable (₹)</b>", table_cell_bold),
+        Paragraph("<b>Tax Split</b>", table_cell_bold),
+        Paragraph("<b>Total (₹)</b>", table_cell_bold),
+    ]
+    rows = [headers]
+
+    for itm in processed_items:
+        tax_str = f"IGST {itm['gst_rate']}%" if is_interstate else f"CGST+SGST {itm['gst_rate']}%"
+        rows.append([
+            Paragraph(str(itm["index"]), table_cell),
+            Paragraph(f"<b>{itm['description']}</b>", table_cell),
+            Paragraph(str(itm["hsn"]), table_cell),
+            Paragraph(f"{itm['qty']} {itm['unit']}", table_cell),
+            Paragraph(f"₹{itm['rate']:,.2f}", table_cell),
+            Paragraph(f"{itm['discount']}%", table_cell),
+            Paragraph(f"₹{itm['taxable']:,.2f}", table_cell),
+            Paragraph(tax_str, table_cell),
+            Paragraph(f"₹{itm['total']:,.2f}", table_cell_bold),
+        ])
+
+    items_table = Table(rows, colWidths=[20, 160, 45, 45, 60, 40, 60, 55, 55])
+    items_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2563EB")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("ALIGN", (0, 0), (0, -1), "CENTER"),
+        ("ALIGN", (2, 0), (5, -1), "CENTER"),
+        ("ALIGN", (6, 0), (-1, -1), "RIGHT"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+        ("PADDING", (0, 0), (-1, -1), 5),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    story.append(items_table)
+    story.append(Spacer(1, 10))
+
+    # Summary & Bank Details
+    bank_text = f"<b>Bank Name:</b> {meta['bank_name']}<br/><b>A/C No:</b> {meta['bank_account']}<br/><b>IFSC Code:</b> {meta['bank_ifsc']}<br/><b>Branch:</b> {meta['bank_branch']}<br/><b>UPI ID:</b> {meta['upi_id']}"
+    
+    if is_interstate:
+        tax_summary_text = f"<b>Taxable Subtotal:</b> ₹{total_taxable:,.2f}<br/><b>IGST Total:</b> ₹{total_igst:,.2f}<br/><b>Round Off:</b> ₹{round_off:+,.2f}"
+    else:
+        tax_summary_text = f"<b>Taxable Subtotal:</b> ₹{total_taxable:,.2f}<br/><b>CGST Total:</b> ₹{total_cgst:,.2f}<br/><b>SGST Total:</b> ₹{total_sgst:,.2f}<br/><b>Round Off:</b> ₹{round_off:+,.2f}"
+
+    summary_data = [
+        [
+            Paragraph("<b>BANK & PAYMENT DETAILS:</b>", bold_sub),
+            Paragraph("<b>FINANCIAL SUMMARY:</b>", bold_sub),
+        ],
+        [
+            Paragraph(bank_text, sub_title_style),
+            Paragraph(tax_summary_text, sub_title_style),
+        ],
+        [
+            Paragraph("", sub_title_style),
+            Paragraph(f"<font size=11 color='#1E3A8A'><b>NET PAYABLE: ₹{net_payable:,.0f}</b></font>", bold_sub),
+        ]
+    ]
+    summary_table = Table(summary_data, colWidths=[270, 270])
+    summary_table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+        ("PADDING", (0, 0), (-1, -1), 6),
+    ]))
+    story.append(summary_table)
+    story.append(Spacer(1, 8))
+
+    # Words Box
+    words_table = Table([[Paragraph(f"<b>Amount in Words:</b> <i>{amount_words}</i>", sub_title_style)]], colWidths=[540])
+    words_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#EFF6FF")),
+        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#BFDBFE")),
+        ("PADDING", (0, 0), (-1, -1), 6),
+    ]))
+    story.append(words_table)
+    story.append(Spacer(1, 10))
+
+    # Terms & Signatory
+    terms_text = f"<b>Terms & Conditions:</b><br/>{meta['terms'].replace(chr(10), '<br/>')}"
+    sign_text = f"For <b>{meta['seller_name']}</b><br/><br/><br/><b>{meta['signatory']}</b>"
+    footer_table = Table([[Paragraph(terms_text, sub_title_style), Paragraph(sign_text, ParagraphStyle("SignStyle", parent=sub_title_style, alignment=2))]], colWidths=[360, 180])
+    footer_table.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
+    story.append(footer_table)
+
+    doc.build(story)
+    return buffer.getvalue()
+
+# Pre-generate PDF & Excel in memory
+pdf_bytes = generate_pdf_invoice()
+
+# ==========================================
+# EXCEL GENERATOR ENGINE
+# ==========================================
+def generate_excel_invoice():
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Tax_Invoice"
+
+    header_fill = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
+    header_font = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
+    sub_font = Font(name="Calibri", size=10, italic=True)
+    bold_font = Font(name="Calibri", size=11, bold=True)
+    thin_border = Border(
+        left=Side(style="thin", color="CBD5E1"),
+        right=Side(style="thin", color="CBD5E1"),
+        top=Side(style="thin", color="CBD5E1"),
+        bottom=Side(style="thin", color="CBD5E1"),
+    )
+
+    ws.merge_cells("A1:H1")
+    ws["A1"] = meta["seller_name"]
+    ws["A1"].font = header_font
+    ws["A1"].fill = header_fill
+    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+
+    ws.merge_cells("A2:H2")
+    ws["A2"] = f"{meta['seller_address']} | GSTIN: {meta['seller_gstin']} | State: {meta['seller_state']}"
+    ws["A2"].font = sub_font
+    ws["A2"].alignment = Alignment(horizontal="center")
+
+    ws.cell(row=4, column=1, value="TAX INVOICE").font = Font(size=12, bold=True, color="1E3A8A")
+    ws.cell(row=5, column=1, value=f"Invoice No: {meta['invoice_number']}").font = bold_font
+    ws.cell(row=5, column=5, value=f"Invoice Date: {meta['invoice_date']}").font = bold_font
+    ws.cell(row=6, column=1, value=f"Billed To: {meta['client_name']}").font = bold_font
+    ws.cell(row=6, column=5, value=f"Client GSTIN: {meta['client_gstin']}").font = bold_font
+    ws.cell(row=7, column=1, value=f"Place of Supply: {meta['client_state']}")
+
+    headers = ["#", "Item Description", "HSN/SAC", "Qty", "Unit Rate (₹)", "Discount %", "Taxable (₹)", "Total (₹)"]
+    start_row = 9
+    for col_idx, h in enumerate(headers, start=1):
+        c = ws.cell(row=start_row, column=col_idx, value=h)
+        c.font = Font(bold=True, color="FFFFFF")
+        c.fill = PatternFill(start_color="2563EB", end_color="2563EB", fill_type="solid")
+        c.alignment = Alignment(horizontal="center")
+
+    cur_r = start_row + 1
+    for item in processed_items:
+        ws.cell(row=cur_r, column=1, value=item["index"]).alignment = Alignment(horizontal="center")
+        ws.cell(row=cur_r, column=2, value=item["description"])
+        ws.cell(row=cur_r, column=3, value=item["hsn"]).alignment = Alignment(horizontal="center")
+        ws.cell(row=cur_r, column=4, value=f"{item['qty']} {item['unit']}").alignment = Alignment(horizontal="center")
+        ws.cell(row=cur_r, column=5, value=item["rate"]).number_format = "₹#,##0.00"
+        ws.cell(row=cur_r, column=6, value=f"{item['discount']}%").alignment = Alignment(horizontal="center")
+        ws.cell(row=cur_r, column=7, value=item["taxable"]).number_format = "₹#,##0.00"
+        ws.cell(row=cur_r, column=8, value=item["total"]).number_format = "₹#,##0.00"
+
+        for c_i in range(1, 9):
+            ws.cell(row=cur_r, column=c_i).border = thin_border
+        cur_r += 1
+
+    cur_r += 1
+    ws.cell(row=cur_r, column=7, value="Taxable Subtotal:").font = bold_font
+    ws.cell(row=cur_r, column=8, value=total_taxable).number_format = "₹#,##0.00"
+    cur_r += 1
+
+    if is_interstate:
+        ws.cell(row=cur_r, column=7, value="IGST Total:").font = bold_font
+        ws.cell(row=cur_r, column=8, value=total_igst).number_format = "₹#,##0.00"
+        cur_r += 1
+    else:
+        ws.cell(row=cur_r, column=7, value="CGST Total:").font = bold_font
+        ws.cell(row=cur_r, column=8, value=total_cgst).number_format = "₹#,##0.00"
+        cur_r += 1
+        ws.cell(row=cur_r, column=7, value="SGST Total:").font = bold_font
+        ws.cell(row=cur_r, column=8, value=total_sgst).number_format = "₹#,##0.00"
+        cur_r += 1
+
+    ws.cell(row=cur_r, column=7, value="Round Off:").font = bold_font
+    ws.cell(row=cur_r, column=8, value=round_off).number_format = "₹#,##0.00"
+    cur_r += 1
+
+    ws.cell(row=cur_r, column=7, value="NET PAYABLE:").font = Font(size=12, bold=True, color="1E3A8A")
+    ws.cell(row=cur_r, column=8, value=net_payable).font = Font(size=12, bold=True, color="1E3A8A")
+    ws.cell(row=cur_r, column=8).number_format = "₹#,##0"
+
+    widths = [5, 38, 12, 12, 15, 12, 16, 16]
+    for col_idx, width in enumerate(widths, start=1):
+        col_letter = openpyxl.utils.get_column_letter(col_idx)
+        ws.column_dimensions[col_letter].width = width
+
+    excel_buffer = io.BytesIO()
+    wb.save(excel_buffer)
+    return excel_buffer.getvalue()
+
+excel_bytes = generate_excel_invoice()
 
 # ==========================================
 # MAIN INTERFACE TABS
@@ -539,44 +657,36 @@ tab_preview, tab_edit_meta, tab_edit_items, tab_export = st.tabs([
 ])
 
 # ------------------------------------------
-# TAB 1: LIVE INVOICE DOCUMENT PREVIEW
+# TAB 1: LIVE INVOICE PREVIEW
 # ------------------------------------------
 with tab_preview:
     st.subheader("Tax Invoice Preview (Print Ready)")
 
-    # Print / Browser PDF button using HTML JS
-    col_p1, col_p2 = st.columns([3, 1])
-    with col_p1:
-        st.caption("Click 'Print / Save as PDF' below to save a vector PDF via your browser:")
-    with col_p2:
-        st.components.v1.html(
-            """
-            <button onclick="window.print()" style="
-                background-color: #2563eb;
-                color: white;
-                border: none;
-                padding: 9px 18px;
-                border-radius: 6px;
-                font-weight: 700;
-                font-size: 14px;
-                cursor: pointer;
-                width: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 8px;
-            ">
-                🖨️ Print / Save as PDF
-            </button>
-            """,
-            height=45,
+    # Direct 1-Click PDF Download right on top of preview
+    col_dl1, col_dl2 = st.columns([2, 1])
+    with col_dl1:
+        st.download_button(
+            label="📥 Download Official GST Invoice (.pdf)",
+            data=pdf_bytes,
+            file_name=f"GST_Invoice_{meta['invoice_number']}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
+    with col_dl2:
+        st.download_button(
+            label="📊 Download Excel (.xlsx)",
+            data=excel_bytes,
+            file_name=f"GST_Invoice_{meta['invoice_number']}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
         )
 
-    # Render HTML Invoice
-    meta = st.session_state.invoice_meta
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # HTML Generator for Clean Preview & Browser Print
     rows_html = ""
     for item in processed_items:
-        tax_col_content = f"IGST: {item['gst_rate']}% (₹{item['igst']:,.2f})" if is_interstate else f"CGST: {item['gst_rate']/2:.1f}%<br>SGST: {item['gst_rate']/2:.1f}%"
+        tax_col_content = f"IGST: {item['gst_rate']}%<br>(₹{item['igst']:,.2f})" if is_interstate else f"CGST: {item['gst_rate']/2:.1f}%<br>SGST: {item['gst_rate']/2:.1f}%"
         rows_html += f"""
         <tr>
             <td style="text-align: center; color: #64748b;">{item['index']}</td>
@@ -594,127 +704,269 @@ with tab_preview:
     tax_summary_html = ""
     if is_interstate:
         tax_summary_html = f"""
-        <div class="inv-total-row">
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
             <span>Integrated GST (IGST):</span>
             <strong>₹{total_igst:,.2f}</strong>
         </div>
         """
     else:
         tax_summary_html = f"""
-        <div class="inv-total-row">
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
             <span>Central GST (CGST):</span>
             <strong>₹{total_cgst:,.2f}</strong>
         </div>
-        <div class="inv-total-row">
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
             <span>State GST (SGST):</span>
             <strong>₹{total_sgst:,.2f}</strong>
         </div>
         """
 
-    invoice_html = f"""
-    <div class="invoice-box">
-        <div class="inv-header">
-            <div>
-                <h1 class="inv-title">{meta['seller_name']}</h1>
-                <div style="font-size: 13px; color: #475569; margin-top: 4px;">{meta['seller_address']}</div>
-                <div style="font-size: 12.5px; color: #475569; margin-top: 2px;">
-                    <strong>GSTIN:</strong> {meta['seller_gstin']} | <strong>PAN:</strong> {meta['seller_pan']} | <strong>Phone:</strong> {meta['seller_phone']}
+    full_component_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            * {{ box-sizing: border-box; }}
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                background: #f8fafc;
+                margin: 0;
+                padding: 15px;
+                color: #1e293b;
+            }}
+            .invoice-card {{
+                max-width: 900px;
+                margin: 0 auto;
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+                padding: 35px 40px;
+            }}
+            .print-action-bar {{
+                text-align: right;
+                margin-bottom: 20px;
+            }}
+            .print-btn {{
+                background-color: #2563eb;
+                color: #ffffff;
+                border: none;
+                padding: 8px 18px;
+                font-size: 13.5px;
+                font-weight: 700;
+                border-radius: 6px;
+                cursor: pointer;
+            }}
+            .print-btn:hover {{
+                background-color: #1d4ed8;
+            }}
+            .inv-header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                border-bottom: 2px solid #2563eb;
+                padding-bottom: 16px;
+                margin-bottom: 24px;
+            }}
+            .inv-title {{
+                font-size: 24px;
+                font-weight: 800;
+                color: #1e3a8a;
+                margin: 0;
+            }}
+            .inv-grid-2 {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 25px;
+                margin-bottom: 24px;
+                font-size: 13px;
+                line-height: 1.5;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                padding: 16px;
+            }}
+            .inv-party-title {{
+                font-weight: 700;
+                font-size: 12px;
+                color: #64748b;
+                text-transform: uppercase;
+                margin-bottom: 6px;
+                border-bottom: 1px solid #e2e8f0;
+                padding-bottom: 4px;
+            }}
+            .inv-table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 24px;
+                font-size: 12.5px;
+            }}
+            .inv-table th {{
+                background-color: #2563eb;
+                color: #ffffff;
+                font-weight: 700;
+                padding: 9px 10px;
+                text-align: left;
+            }}
+            .inv-table td {{
+                padding: 9px 10px;
+                border-bottom: 1px solid #e2e8f0;
+            }}
+            .inv-table tr:nth-child(even) td {{
+                background-color: #fbfcfe;
+            }}
+            .inv-summary-grid {{
+                display: grid;
+                grid-template-columns: 1.2fr 1fr;
+                gap: 25px;
+                margin-bottom: 20px;
+                font-size: 13px;
+            }}
+            .words-box {{
+                background: #eff6ff;
+                border: 1px solid #bfdbfe;
+                border-radius: 6px;
+                padding: 10px 14px;
+                font-size: 12.5px;
+                color: #1e40af;
+                margin-bottom: 20px;
+            }}
+            .inv-footer {{
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+                padding-top: 20px;
+                border-top: 1px solid #e2e8f0;
+                font-size: 12px;
+                color: #64748b;
+            }}
+            .sign-box {{
+                text-align: center;
+                border-top: 1px solid #cbd5e1;
+                width: 220px;
+                padding-top: 6px;
+                font-weight: 600;
+                color: #0f172a;
+            }}
+            @media print {{
+                .print-action-bar {{ display: none !important; }}
+                body {{ background: #ffffff; padding: 0; }}
+                .invoice-card {{ border: none; box-shadow: none; padding: 0; max-width: 100%; }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="invoice-card">
+            <div class="print-action-bar">
+                <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+            </div>
+
+            <div class="inv-header">
+                <div>
+                    <h1 class="inv-title">{meta['seller_name']}</h1>
+                    <div style="font-size: 13px; color: #475569; margin-top: 4px;">{meta['seller_address']}</div>
+                    <div style="font-size: 12.5px; color: #475569; margin-top: 2px;">
+                        <strong>GSTIN:</strong> {meta['seller_gstin']} | <strong>PAN:</strong> {meta['seller_pan']} | <strong>Phone:</strong> {meta['seller_phone']}
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 22px; font-weight: 800; color: #0f172a;">TAX INVOICE</div>
+                    <span style="display: inline-block; background: #eff6ff; color: #1d4ed8; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-top: 4px;">Original for Recipient</span>
+                    <div style="font-size: 12.5px; color: #334155; margin-top: 8px;">
+                        <strong>Invoice #:</strong> {meta['invoice_number']}<br>
+                        <strong>Date:</strong> {meta['invoice_date']}<br>
+                        <strong>Due Date:</strong> {meta['due_date']}
+                    </div>
                 </div>
             </div>
-            <div style="text-align: right;">
-                <div style="font-size: 22px; font-weight: 800; color: #0f172a;">TAX INVOICE</div>
-                <span class="inv-badge">Original for Recipient</span>
-                <div style="font-size: 13px; color: #334155; margin-top: 8px;">
-                    <strong>Invoice #:</strong> {meta['invoice_number']}<br>
-                    <strong>Date:</strong> {meta['invoice_date']}<br>
-                    <strong>Due Date:</strong> {meta['due_date']}
+
+            <div class="inv-grid-2">
+                <div>
+                    <div class="inv-party-title">Billed To (Client Details):</div>
+                    <div style="font-weight: 700; font-size: 14.5px; color: #0f172a;">{meta['client_name']}</div>
+                    <div style="color: #475569; margin: 3px 0;">{meta['client_address']}</div>
+                    <div><strong>GSTIN:</strong> {meta['client_gstin'] or 'Unregistered'}</div>
+                    <div><strong>State of Supply:</strong> {meta['client_state']}</div>
+                </div>
+                <div>
+                    <div class="inv-party-title">Dispatch / Supplier Location:</div>
+                    <div style="font-weight: 700; font-size: 14.5px; color: #0f172a;">{meta['seller_name']}</div>
+                    <div style="color: #475569; margin: 3px 0;">State of Origin: <strong>{meta['seller_state']}</strong></div>
+                    <div><strong>Place of Supply:</strong> {meta['client_state']}</div>
+                    <div style="color: #2563eb; font-weight: 600; margin-top: 4px;">
+                        Tax Mechanism: {'Inter-State (IGST)' if is_interstate else 'Intra-State (CGST + SGST)'}
+                    </div>
+                </div>
+            </div>
+
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%; text-align: center;">#</th>
+                        <th style="width: 33%;">Item Description</th>
+                        <th style="width: 10%; text-align: center;">HSN/SAC</th>
+                        <th style="width: 10%; text-align: center;">Qty</th>
+                        <th style="width: 11%; text-align: right;">Rate (₹)</th>
+                        <th style="width: 6%; text-align: right;">Disc %</th>
+                        <th style="width: 11%; text-align: right;">Taxable (₹)</th>
+                        <th style="width: 14%; text-align: right;">Tax Split</th>
+                        <th style="width: 13%; text-align: right;">Total (₹)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows_html}
+                </tbody>
+            </table>
+
+            <div class="inv-summary-grid">
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px;">
+                    <div class="inv-party-title">Bank & Payment Instructions:</div>
+                    <div style="font-size: 12.5px; line-height: 1.6; color: #334155;">
+                        <strong>Bank Name:</strong> {meta['bank_name']}<br>
+                        <strong>A/C No:</strong> {meta['bank_account']}<br>
+                        <strong>IFSC Code:</strong> {meta['bank_ifsc']}<br>
+                        <strong>Branch:</strong> {meta['bank_branch']}<br>
+                        <strong>UPI ID:</strong> <span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace;">{meta['upi_id']}</span>
+                    </div>
+                </div>
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
+                        <span>Taxable Subtotal:</span>
+                        <strong>₹{total_taxable:,.2f}</strong>
+                    </div>
+                    {tax_summary_html}
+                    <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
+                        <span>Round Off:</span>
+                        <span>₹{round_off:+,.2f}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 17px; font-weight: 800; color: #0f172a; border-top: 2px solid #0f172a; margin-top: 8px;">
+                        <span>Net Payable:</span>
+                        <span>₹{net_payable:,.0f}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="words-box">
+                <strong>Amount in Words:</strong> {amount_words}
+            </div>
+
+            <div class="inv-footer">
+                <div style="max-width: 55%;">
+                    <strong>Terms & Conditions:</strong><br>
+                    <span style="white-space: pre-line; line-height: 1.4;">{meta['terms']}</span>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 12px; margin-bottom: 45px;">For <strong>{meta['seller_name']}</strong></div>
+                    <div class="sign-box">{meta['signatory']}</div>
                 </div>
             </div>
         </div>
-
-        <div class="inv-grid-2">
-            <div>
-                <div class="inv-party-title">Billed To (Client Details):</div>
-                <div style="font-weight: 700; font-size: 15px; color: #0f172a;">{meta['client_name']}</div>
-                <div style="color: #475569; margin: 3px 0;">{meta['client_address']}</div>
-                <div><strong>GSTIN:</strong> {meta['client_gstin']}</div>
-                <div><strong>State of Supply:</strong> {meta['client_state']}</div>
-            </div>
-            <div>
-                <div class="inv-party-title">Dispatch / Supplier Location:</div>
-                <div style="font-weight: 700; font-size: 15px; color: #0f172a;">{meta['seller_name']}</div>
-                <div style="color: #475569; margin: 3px 0;">State of Origin: <strong>{meta['seller_state']}</strong></div>
-                <div><strong>Place of Supply:</strong> {meta['client_state']}</div>
-                <div style="color: #2563eb; font-weight: 600; margin-top: 4px;">
-                    Tax Mechanism: {'Inter-State (IGST)' if is_interstate else 'Intra-State (CGST + SGST)'}
-                </div>
-            </div>
-        </div>
-
-        <table class="inv-table">
-            <thead>
-                <tr>
-                    <th style="width: 5%; text-align: center;">#</th>
-                    <th style="width: 32%;">Item Description</th>
-                    <th style="width: 10%; text-align: center;">HSN/SAC</th>
-                    <th style="width: 10%; text-align: center;">Qty</th>
-                    <th style="width: 11%; text-align: right;">Rate (₹)</th>
-                    <th style="width: 6%; text-align: right;">Disc %</th>
-                    <th style="width: 11%; text-align: right;">Taxable (₹)</th>
-                    <th style="width: 15%; text-align: right;">Tax Split</th>
-                    <th style="width: 13%; text-align: right;">Total (₹)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {rows_html}
-            </tbody>
-        </table>
-
-        <div class="inv-summary-grid">
-            <div>
-                <div class="inv-party-title">Bank & Payment Instructions:</div>
-                <div style="font-size: 13px; line-height: 1.6; color: #334155;">
-                    <strong>Bank Name:</strong> {meta['bank_name']}<br>
-                    <strong>A/C No:</strong> {meta['bank_account']}<br>
-                    <strong>IFSC Code:</strong> {meta['bank_ifsc']}<br>
-                    <strong>Branch:</strong> {meta['bank_branch']}<br>
-                    <strong>UPI ID:</strong> <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace;">{meta['upi_id']}</span>
-                </div>
-            </div>
-            <div>
-                <div class="inv-total-row">
-                    <span>Taxable Subtotal:</span>
-                    <strong>₹{total_taxable:,.2f}</strong>
-                </div>
-                {tax_summary_html}
-                <div class="inv-total-row">
-                    <span>Round Off:</span>
-                    <span>₹{round_off:+,.2f}</span>
-                </div>
-                <div class="inv-grand-total">
-                    <span>Total Net Payable:</span>
-                    <span>₹{net_payable:,.0f}</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="words-box">
-            <strong>Amount in Words:</strong> {amount_words}
-        </div>
-
-        <div class="inv-footer">
-            <div style="max-width: 55%;">
-                <strong>Terms & Conditions:</strong><br>
-                <span style="white-space: pre-line; line-height: 1.4;">{meta['terms']}</span>
-            </div>
-            <div style="text-align: right;">
-                <div style="font-size: 12px; margin-bottom: 45px;">For <strong>{meta['seller_name']}</strong></div>
-                <div class="sign-box">{meta['signatory']}</div>
-            </div>
-        </div>
-    </div>
+    </body>
+    </html>
     """
-    st.markdown(invoice_html, unsafe_allow_html=True)
+
+    st.components.v1.html(full_component_html, height=920, scrolling=True)
 
 # ------------------------------------------
 # TAB 2: BUSINESS & CLIENT DETAILS
@@ -856,117 +1108,37 @@ with tab_export:
     d_col1, d_col2 = st.columns(2)
 
     with d_col1:
-        st.markdown("#### 📊 Formatted Excel Invoice (.xlsx)")
-        st.caption("Includes full company header, GSTIN details, dynamic line items, and audit-ready tax calculations.")
-
-        # Build Excel Workbook using openpyxl
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Tax_Invoice"
-
-        # Styles
-        header_fill = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
-        header_font = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
-        sub_font = Font(name="Calibri", size=10, italic=True)
-        bold_font = Font(name="Calibri", size=11, bold=True)
-        thin_border = Border(
-            left=Side(style="thin", color="CBD5E1"),
-            right=Side(style="thin", color="CBD5E1"),
-            top=Side(style="thin", color="CBD5E1"),
-            bottom=Side(style="thin", color="CBD5E1"),
+        st.markdown("#### 📄 Direct Official PDF (.pdf)")
+        st.caption("Auto-generated vector PDF with exact table borders, GST splitting, and authorized sign.")
+        st.download_button(
+            label="📥 Download Official GST Invoice (.pdf)",
+            data=pdf_bytes,
+            file_name=f"GST_Invoice_{meta['invoice_number']}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
         )
 
-        # Company Header
-        ws.merge_cells("A1:H1")
-        ws["A1"] = meta["seller_name"]
-        ws["A1"].font = header_font
-        ws["A1"].fill = header_fill
-        ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
-
-        ws.merge_cells("A2:H2")
-        ws["A2"] = f"{meta['seller_address']} | GSTIN: {meta['seller_gstin']} | State: {meta['seller_state']}"
-        ws["A2"].font = sub_font
-        ws["A2"].alignment = Alignment(horizontal="center")
-
-        ws.cell(row=4, column=1, value="TAX INVOICE").font = Font(size=12, bold=True, color="1E3A8A")
-        ws.cell(row=5, column=1, value=f"Invoice No: {meta['invoice_number']}").font = bold_font
-        ws.cell(row=5, column=5, value=f"Invoice Date: {meta['invoice_date']}").font = bold_font
-        ws.cell(row=6, column=1, value=f"Billed To: {meta['client_name']}").font = bold_font
-        ws.cell(row=6, column=5, value=f"Client GSTIN: {meta['client_gstin']}").font = bold_font
-        ws.cell(row=7, column=1, value=f"Place of Supply: {meta['client_state']}")
-
-        # Table Headers
-        headers = ["#", "Item Description", "HSN/SAC", "Qty", "Unit Rate (₹)", "Discount %", "Taxable (₹)", "Total (₹)"]
-        start_row = 9
-        for col_idx, h in enumerate(headers, start=1):
-            c = ws.cell(row=start_row, column=col_idx, value=h)
-            c.font = Font(bold=True, color="FFFFFF")
-            c.fill = PatternFill(start_color="2563EB", end_color="2563EB", fill_type="solid")
-            c.alignment = Alignment(horizontal="center")
-
-        # Table Rows
-        cur_r = start_row + 1
-        for item in processed_items:
-            ws.cell(row=cur_r, column=1, value=item["index"]).alignment = Alignment(horizontal="center")
-            ws.cell(row=cur_r, column=2, value=item["description"])
-            ws.cell(row=cur_r, column=3, value=item["hsn"]).alignment = Alignment(horizontal="center")
-            ws.cell(row=cur_r, column=4, value=f"{item['qty']} {item['unit']}").alignment = Alignment(horizontal="center")
-            ws.cell(row=cur_r, column=5, value=item["rate"]).number_format = "₹#,##0.00"
-            ws.cell(row=cur_r, column=6, value=f"{item['discount']}%").alignment = Alignment(horizontal="center")
-            ws.cell(row=cur_r, column=7, value=item["taxable"]).number_format = "₹#,##0.00"
-            ws.cell(row=cur_r, column=8, value=item["total"]).number_format = "₹#,##0.00"
-
-            for c_i in range(1, 9):
-                ws.cell(row=cur_r, column=c_i).border = thin_border
-            cur_r += 1
-
-        # Totals
-        cur_r += 1
-        ws.cell(row=cur_r, column=7, value="Taxable Subtotal:").font = bold_font
-        ws.cell(row=cur_r, column=8, value=total_taxable).number_format = "₹#,##0.00"
-        cur_r += 1
-
-        if is_interstate:
-            ws.cell(row=cur_r, column=7, value="IGST Total:").font = bold_font
-            ws.cell(row=cur_r, column=8, value=total_igst).number_format = "₹#,##0.00"
-            cur_r += 1
-        else:
-            ws.cell(row=cur_r, column=7, value="CGST Total:").font = bold_font
-            ws.cell(row=cur_r, column=8, value=total_cgst).number_format = "₹#,##0.00"
-            cur_r += 1
-            ws.cell(row=cur_r, column=7, value="SGST Total:").font = bold_font
-            ws.cell(row=cur_r, column=8, value=total_sgst).number_format = "₹#,##0.00"
-            cur_r += 1
-
-        ws.cell(row=cur_r, column=7, value="Round Off:").font = bold_font
-        ws.cell(row=cur_r, column=8, value=round_off).number_format = "₹#,##0.00"
-        cur_r += 1
-
-        ws.cell(row=cur_r, column=7, value="NET PAYABLE:").font = Font(size=12, bold=True, color="1E3A8A")
-        ws.cell(row=cur_r, column=8, value=net_payable).font = Font(size=12, bold=True, color="1E3A8A")
-        ws.cell(row=cur_r, column=8).number_format = "₹#,##0"
-
-        # Column widths
-        widths = [5, 38, 12, 12, 15, 12, 16, 16]
-        for col_idx, width in enumerate(widths, start=1):
-            col_letter = openpyxl.utils.get_column_letter(col_idx)
-            ws.column_dimensions[col_letter].width = width
-
-        excel_buffer = io.BytesIO()
-        wb.save(excel_buffer)
-
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("#### 📊 Formatted Excel Invoice (.xlsx)")
+        st.caption("Includes full company header, GSTIN details, dynamic line items, and audit-ready tax calculations.")
         st.download_button(
             label="📊 Download Excel Invoice (.xlsx)",
-            data=excel_buffer.getvalue(),
+            data=excel_bytes,
             file_name=f"GST_Invoice_{meta['invoice_number']}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
         )
 
     with d_col2:
-        st.markdown("#### 📄 Printable Vector PDF")
-        st.caption("Generate a high-definition PDF ready for direct email delivery to clients or chartered accountants.")
-        st.info("💡 **Tip:** Go to the **'👁️ Live Invoice Document Preview'** tab and click the **🖨️ Print / Save as PDF** button. In your browser's print dialog, select **'Save as PDF'** to export an ultra-crisp, watermark-free vector PDF!")
+        st.markdown("#### 🌐 Offline Standalone HTML")
+        st.caption("Self-contained web invoice file ready to open in any browser with 1-click print support.")
+        st.download_button(
+            label="🌐 Download Standalone HTML Invoice",
+            data=full_component_html.encode("utf-8"),
+            file_name=f"Invoice_{meta['invoice_number']}.html",
+            mime="text/html",
+            use_container_width=True,
+        )
 
 # ==========================================
 # FOOTER
