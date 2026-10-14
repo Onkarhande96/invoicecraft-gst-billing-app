@@ -671,6 +671,7 @@ with tab_preview:
             file_name=f"GST_Invoice_{meta['invoice_number']}.pdf",
             mime="application/pdf",
             use_container_width=True,
+            key="btn_pdf_preview",
         )
     with col_dl2:
         st.download_button(
@@ -679,6 +680,7 @@ with tab_preview:
             file_name=f"GST_Invoice_{meta['invoice_number']}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
+            key="btn_excel_preview",
         )
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -1116,6 +1118,7 @@ with tab_export:
             file_name=f"GST_Invoice_{meta['invoice_number']}.pdf",
             mime="application/pdf",
             use_container_width=True,
+            key="btn_pdf_tab4",
         )
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -1127,6 +1130,7 @@ with tab_export:
             file_name=f"GST_Invoice_{meta['invoice_number']}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
+            key="btn_excel_tab4",
         )
 
     with d_col2:
@@ -1138,6 +1142,7 @@ with tab_export:
             file_name=f"Invoice_{meta['invoice_number']}.html",
             mime="text/html",
             use_container_width=True,
+            key="btn_html_tab4",
         )
 
 # ==========================================
